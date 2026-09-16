@@ -1,23 +1,18 @@
+import streamlit
 import pandas as pd
 import plotly.express as px
 
-streamlit.set_page_config(
-    page_title="영화 데이터 그래프 도감 2 - 분포와 관계",
-    page_icon="🎬",
-    layout="wide",
-)
+DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
 
 streamlit.title("영화 데이터 그래프 도감 2 - 분포와 관계")
 streamlit.write("KOBIS 영화 데이터를 이용해 영화 데이터의 분포와 관계를 살펴봅니다.")
-
-DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
 
 
 @streamlit.cache_data
 def load_data():
     df = pd.read_csv(DATA_URL)
 
-    # 여러 장르가 세로막대(|)로 적혀 있으면 첫 번째 장르만 사용
+    # 여러 장르가 |로 적혀 있으면 첫 번째 장르만 사용
     df["genre_first"] = (
         df["genre"]
         .fillna("미상")
@@ -26,9 +21,9 @@ def load_data():
         .str[0]
         .str.strip()
     )
-    df.loc[df["genre_first"].eq(""), "genre_first"] = "미상"
+    df.loc[df["genre_first"] == "", "genre_first"] = "미상"
 
-    # 총 관객 수가 문자열이어도 숫자로 변환
+    # 총 관객 수를 숫자로 변환
     df["total_audi"] = (
         df["total_audi"]
         .astype(str)
@@ -45,9 +40,7 @@ def load_data():
 try:
     df = load_data()
 
-    # ─────────────────────────────────────────
-    # 1. 장르별 영화 편수 - 도넛 그래프
-    # ─────────────────────────────────────────
+    # 1. 장르별 영화 편수
     streamlit.subheader("1. 장르별 영화 편수")
 
     genre_counts = (
@@ -76,11 +69,6 @@ try:
         ),
     )
 
-    fig1.update_layout(
-        legend_title_text="장르",
-        margin=dict(t=70, b=20, l=20, r=20),
-    )
-
     streamlit.plotly_chart(fig1, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
@@ -88,9 +76,7 @@ try:
         "장르별로 영화가 몇 편씩 분포되어 있는지와 각 장르가 차지하는 비율을 알 수 있습니다."
     )
 
-    # ─────────────────────────────────────────
-    # 2. 장르 → 영화 트리맵
-    # ─────────────────────────────────────────
+    # 2. 장르 안에 영화가 들어 있는 트리맵
     streamlit.markdown("---")
     streamlit.subheader("2. 장르 안에 영화가 들어 있는 트리맵")
 
@@ -103,17 +89,12 @@ try:
         title="장르별 영화와 총 관객",
     )
 
-    # 영화 칸에 마우스를 올렸을 때 영화명과 총 관객이 표시되도록 설정
     fig2.update_traces(
         hovertemplate=(
             "<b>%{label}</b><br>"
             "총 관객: %{value:,.0f}명"
             "<extra></extra>"
         )
-    )
-
-    fig2.update_layout(
-        margin=dict(t=70, b=20, l=20, r=20),
     )
 
     streamlit.plotly_chart(fig2, use_container_width=True)
