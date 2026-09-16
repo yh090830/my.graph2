@@ -34,6 +34,17 @@ def load_data():
         df["total_audi"], errors="coerce"
     ).fillna(0)
 
+    # 개봉일 스크린 수를 숫자로 변환
+    df["first_scrn"] = (
+        df["first_scrn"]
+        .astype(str)
+        .str.replace(",", "", regex=False)
+        .str.strip()
+    )
+    df["first_scrn"] = pd.to_numeric(
+        df["first_scrn"], errors="coerce"
+    ).fillna(0)
+
     df["movieNm"] = df["movieNm"].fillna("영화명 미상").astype(str)
 
     return df
@@ -123,11 +134,9 @@ try:
 
     streamlit.plotly_chart(fig3, use_container_width=True)
 
-    # 관객 수가 가장 많은 구간 찾기
     bins = pd.cut(df["total_audi"], bins=30)
     most_common_bin = bins.value_counts().idxmax()
 
-    # 가장 관객이 많은 영화 찾기
     max_idx = df["total_audi"].idxmax()
     max_movie = df.loc[max_idx, "movieNm"]
     max_audi = df.loc[max_idx, "total_audi"]
@@ -139,6 +148,32 @@ try:
         f"{most_common_bin.right:,.0f}명 구간에 몰려 있습니다. "
         f"가장 관객이 많은 영화는 **{max_movie}**이며, "
         f"총 관객 수는 **{max_audi:,.0f}명**입니다."
+    )
+
+    # 4. 개봉일 스크린 수와 총 관객의 관계
+    streamlit.markdown("---")
+    streamlit.subheader("4. 개봉일 스크린 수와 총 관객의 관계")
+
+    fig4 = px.scatter(
+        df,
+        x="first_scrn",
+        y="total_audi",
+        color="genre_first",
+        hover_name="movieNm",
+        title="개봉일 스크린 수와 총 관객의 관계",
+        labels={
+            "first_scrn": "개봉일 스크린 수",
+            "total_audi": "총 관객",
+            "genre_first": "장르"
+        }
+    )
+
+    streamlit.plotly_chart(fig4, use_container_width=True)
+
+    streamlit.markdown("### 이 그래프로 알 수 있는 것")
+    streamlit.info(
+        "개봉일 스크린 수와 총 관객의 관계를 알 수 있으며, "
+        "장르별로 점의 색이 다르게 표시됩니다."
     )
 
 except Exception as e:
