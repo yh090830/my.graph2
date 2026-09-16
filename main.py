@@ -1,23 +1,23 @@
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(
+streamlit.set_page_config(
     page_title="영화 데이터 그래프 도감 2 - 분포와 관계",
     page_icon="🎬",
     layout="wide",
 )
 
-st.title("영화 데이터 그래프 도감 2 - 분포와 관계")
-st.write("KOBIS 영화 데이터를 이용해 장르별 영화 편수의 분포를 살펴봅니다.")
+streamlit.title("영화 데이터 그래프 도감 2 - 분포와 관계")
+streamlit.write("KOBIS 영화 데이터를 이용해 영화 데이터의 분포와 관계를 살펴봅니다.")
 
 DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
 
 
-@st.cache_data
+@streamlit.cache_data
 def load_data():
     df = pd.read_csv(DATA_URL)
 
-    # 장르에 여러 값이 있으면 첫 번째 장르만 사용
+    # 여러 장르가 세로막대(|)로 적혀 있으면 첫 번째 장르만 사용
     df["genre_first"] = (
         df["genre"]
         .fillna("미상")
@@ -26,15 +26,29 @@ def load_data():
         .str[0]
         .str.strip()
     )
-
     df.loc[df["genre_first"].eq(""), "genre_first"] = "미상"
+
+    # 총 관객 수가 문자열이어도 숫자로 변환
+    df["total_audi"] = (
+        df["total_audi"]
+        .astype(str)
+        .str.replace(",", "", regex=False)
+        .str.strip()
+    )
+    df["total_audi"] = pd.to_numeric(df["total_audi"], errors="coerce").fillna(0)
+
+    df["movieNm"] = df["movieNm"].fillna("영화명 미상").astype(str)
+
     return df
 
 
 try:
     df = load_data()
 
-    st.subheader("1. 장르별 영화 편수")
+    # ─────────────────────────────────────────
+    # 1. 장르별 영화 편수 - 도넛 그래프
+    # ─────────────────────────────────────────
+    streamlit.subheader("1. 장르별 영화 편수")
 
     genre_counts = (
         df["genre_first"]
@@ -43,7 +57,7 @@ try:
         .reset_index(name="영화 편수")
     )
 
-    fig = px.pie(
+    fig1 = px.pie(
         genre_counts,
         names="장르",
         values="영화 편수",
@@ -51,23 +65,64 @@ try:
         title="장르별 영화 편수",
     )
 
-    fig.update_traces(
+    fig1.update_traces(
         textposition="inside",
         textinfo="percent",
-        hovertemplate="<b>%{label}</b><br>편수: %{value}편<br>비율: %{percent}<extra></extra>",
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "편수: %{value}편<br>"
+            "비율: %{percent}"
+            "<extra></extra>"
+        ),
     )
 
-    fig.update_layout(
+    fig1.update_layout(
         legend_title_text="장르",
         margin=dict(t=70, b=20, l=20, r=20),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    streamlit.plotly_chart(fig1, use_container_width=True)
 
-    st.markdown("---")
-    st.markdown("### 이 그래프로 알 수 있는 것")
-    st.info("장르별로 영화가 몇 편씩 분포되어 있는지와 전체 영화에서 각 장르가 차지하는 비율을 알 수 있습니다.")
+    streamlit.markdown("### 이 그래프로 알 수 있는 것")
+    streamlit.info(
+        "장르별로 영화가 몇 편씩 분포되어 있는지와 각 장르가 차지하는 비율을 알 수 있습니다."
+    )
+
+    # ─────────────────────────────────────────
+    # 2. 장르 → 영화 트리맵
+    # ─────────────────────────────────────────
+    streamlit.markdown("---")
+    streamlit.subheader("2. 장르 안에 영화가 들어 있는 트리맵")
+
+    treemap_df = df[["genre_first", "movieNm", "total_audi"]].copy()
+
+    fig2 = px.treemap(
+        treemap_df,
+        path=["genre_first", "movieNm"],
+        values="total_audi",
+        title="장르별 영화와 총 관객",
+    )
+
+    # 영화 칸에 마우스를 올렸을 때 영화명과 총 관객이 표시되도록 설정
+    fig2.update_traces(
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "총 관객: %{value:,.0f}명"
+            "<extra></extra>"
+        )
+    )
+
+    fig2.update_layout(
+        margin=dict(t=70, b=20, l=20, r=20),
+    )
+
+    streamlit.plotly_chart(fig2, use_container_width=True)
+
+    streamlit.markdown("### 이 그래프로 알 수 있는 것")
+    streamlit.info(
+        "장르별로 어떤 영화가 포함되어 있는지와 영화별 총 관객 규모의 차이를 알 수 있습니다."
+    )
 
 except Exception as e:
-    st.error("데이터를 불러오는 중 오류가 발생했습니다.")
-    st.code(str(e))
+    streamlit.error("데이터를 불러오거나 그래프를 만드는 중 오류가 발생했습니다.")
+    streamlit.code(str(e))
