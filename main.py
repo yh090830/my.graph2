@@ -1,11 +1,74 @@
-스트림릿 앱(main.py)을 새로 만들어 줘. 제목은 '영화 데이터 그래프 도감 2 - 분포와 관계'.
-- 데이터는 이 주소에서 불러와:
-  https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv
-  1년간 박스오피스 10위권에 든 영화 가운데 이 기간에 개봉한 216편의 요약표야. 열은
-  movieCd(영화코드) · movieNm(영화명) · openDt(개봉일, 여덟 자리 숫자) ·
-  genre(장르 - 세로막대 기호로 여러 개 적힌 영화는 첫 번째 장르만 써) · nation(제작 국가) ·
-  first_scrn(개봉일 스크린수) · first_show(개봉일 상영횟수) · first_week_audi(개봉 첫 주 관객) ·
-  total_audi(총 관객) · days_in_top10(10위권에 머문 날수).
-- 첫 그래프: 장르별 영화 편수를 플롯리 도넛 그래프로 보여 줘. 조각에 마우스를 올리면 편수와 비율이 보이게.
-- 그래프마다 아래에 '이 그래프로 알 수 있는 것' 한 문장을 넣을 자리를 만들고, 구역을 나눠 줘.
-- 필요한 라이브러리 목록(requirements.txt)도 같이 줘. 버전 숫자 없이 이름만.
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+st.set_page_config(
+    page_title="영화 데이터 그래프 도감 2 - 분포와 관계",
+    page_icon="🎬",
+    layout="wide",
+)
+
+st.title("영화 데이터 그래프 도감 2 - 분포와 관계")
+st.write("KOBIS 영화 데이터를 이용해 장르별 영화 편수의 분포를 살펴봅니다.")
+
+DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
+
+
+@st.cache_data
+def load_data():
+    df = pd.read_csv(DATA_URL)
+
+    # 장르에 여러 값이 있으면 첫 번째 장르만 사용
+    df["genre_first"] = (
+        df["genre"]
+        .fillna("미상")
+        .astype(str)
+        .str.split("|")
+        .str[0]
+        .str.strip()
+    )
+
+    df.loc[df["genre_first"].eq(""), "genre_first"] = "미상"
+    return df
+
+
+try:
+    df = load_data()
+
+    st.subheader("1. 장르별 영화 편수")
+
+    genre_counts = (
+        df["genre_first"]
+        .value_counts()
+        .rename_axis("장르")
+        .reset_index(name="영화 편수")
+    )
+
+    fig = px.pie(
+        genre_counts,
+        names="장르",
+        values="영화 편수",
+        hole=0.55,
+        title="장르별 영화 편수",
+    )
+
+    fig.update_traces(
+        textposition="inside",
+        textinfo="percent",
+        hovertemplate="<b>%{label}</b><br>편수: %{value}편<br>비율: %{percent}<extra></extra>",
+    )
+
+    fig.update_layout(
+        legend_title_text="장르",
+        margin=dict(t=70, b=20, l=20, r=20),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+    st.markdown("### 이 그래프로 알 수 있는 것")
+    st.info("장르별로 영화가 몇 편씩 분포되어 있는지와 전체 영화에서 각 장르가 차지하는 비율을 알 수 있습니다.")
+
+except Exception as e:
+    st.error("데이터를 불러오는 중 오류가 발생했습니다.")
+    st.code(str(e))
