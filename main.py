@@ -1,11 +1,9 @@
+
 import streamlit
 import pandas as pd
 import plotly.express as px
 
 DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
-
-streamlit.title("영화 데이터 그래프 도감 2 - 분포와 관계")
-streamlit.write("KOBIS 영화 데이터를 이용해 영화 데이터의 분포와 관계를 살펴봅니다.")
 
 
 @streamlit.cache_data
@@ -21,31 +19,28 @@ def load_data():
         .str[0]
         .str.strip()
     )
+
     df.loc[df["genre_first"] == "", "genre_first"] = "미상"
 
-    # 총 관객 수를 숫자로 변환
-    df["total_audi"] = (
-        df["total_audi"]
-        .astype(str)
-        .str.replace(",", "", regex=False)
-        .str.strip()
-    )
-    df["total_audi"] = pd.to_numeric(
-        df["total_audi"],
-        errors="coerce"
-    ).fillna(0)
+    # 숫자형 데이터 변환 함수
+    def convert_numeric(column):
+        return pd.to_numeric(
+            df[column]
+            .fillna(0)
+            .astype(str)
+            .str.replace(",", "", regex=False)
+            .str.strip(),
+            errors="coerce"
+        ).fillna(0)
 
-    # 개봉일 스크린 수를 숫자로 변환
-    df["first_scrn"] = (
-        df["first_scrn"]
-        .astype(str)
-        .str.replace(",", "", regex=False)
-        .str.strip()
-    )
-    df["first_scrn"] = pd.to_numeric(
-        df["first_scrn"],
-        errors="coerce"
-    ).fillna(0)
+    # 총 관객 수
+    df["total_audi"] = convert_numeric("total_audi")
+
+    # 개봉일 스크린 수
+    df["first_scrn"] = convert_numeric("first_scrn")
+
+    # 첫 주 관객 수
+    df["first_week_audi"] = convert_numeric("first_week_audi")
 
     # 영화 이름이 없는 경우 처리
     df["movieNm"] = (
@@ -97,6 +92,7 @@ try:
     )
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
     streamlit.info(
         "장르별로 영화가 몇 편씩 분포되어 있는지와 "
         "각 장르가 차지하는 비율을 알 수 있습니다."
@@ -134,6 +130,7 @@ try:
     )
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
     streamlit.info(
         "장르별로 어떤 영화가 포함되어 있는지와 "
         "영화별 총 관객 규모의 차이를 알 수 있습니다."
@@ -170,10 +167,13 @@ try:
     most_common_bin = bins.value_counts().idxmax()
 
     max_idx = df["total_audi"].idxmax()
+
     max_movie = df.loc[max_idx, "movieNm"]
+
     max_audi = df.loc[max_idx, "total_audi"]
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
     streamlit.info(
         f"대부분의 영화는 총 관객 수가 "
         f"{most_common_bin.left:,.0f}명 ~ "
@@ -209,6 +209,7 @@ try:
     )
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
     streamlit.info(
         "개봉일 스크린 수와 총 관객의 관계를 알 수 있으며, "
         "장르별로 점의 색이 다르게 표시됩니다."
@@ -253,6 +254,7 @@ try:
     )
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
     streamlit.info(
         "영화가 10편 이상인 장르들의 총 관객 수 분포를 "
         "비교할 수 있습니다. 상자 밖으로 튀어나온 점은 "
@@ -261,8 +263,51 @@ try:
     )
 
 
+    # ==========================================
+    # 6. 첫 주 관객 수를 활용한 버블 산점도
+    # ==========================================
+    streamlit.markdown("---")
+    streamlit.subheader("6. 첫 주 관객 수를 활용한 버블 산점도")
+
+    fig6 = px.scatter(
+        df,
+        x="first_scrn",
+        y="total_audi",
+        color="genre_first",
+        size="first_week_audi",
+        size_max=50,
+        hover_name="movieNm",
+        hover_data={
+            "first_scrn": ":,",
+            "total_audi": ":,",
+            "first_week_audi": ":,"
+        },
+        title="개봉일 스크린 수와 총 관객의 관계 (버블 그래프)",
+        labels={
+            "first_scrn": "개봉일 스크린 수",
+            "total_audi": "총 관객",
+            "genre_first": "장르",
+            "first_week_audi": "첫 주 관객 수"
+        }
+    )
+
+    streamlit.plotly_chart(
+        fig6,
+        use_container_width=True
+    )
+
+    streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
+    streamlit.info(
+        "개봉일 스크린 수와 총 관객의 관계를 확인하면서 "
+        "첫 주 관객 수가 많을수록 버블이 크게 표시됩니다. "
+        "장르별 색상으로 영화의 분포를 비교할 수 있습니다."
+    )
+
+
 except Exception as e:
     streamlit.error(
         "데이터를 불러오거나 그래프를 만드는 중 오류가 발생했습니다."
     )
+
     streamlit.code(str(e))
