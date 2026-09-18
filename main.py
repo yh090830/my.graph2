@@ -54,6 +54,9 @@ def load_data():
     # 첫 주 관객 수
     df["first_week_audi"] = convert_numeric("first_week_audi")
 
+    # 10위권에 머문 날수
+    df["days_in_top10"] = convert_numeric("days_in_top10")
+
     # 영화 이름이 없는 경우 처리
     df["movieNm"] = (
         df["movieNm"]
@@ -98,10 +101,7 @@ try:
         )
     )
 
-    streamlit.plotly_chart(
-        fig1,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig1, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
 
@@ -136,10 +136,7 @@ try:
         )
     )
 
-    streamlit.plotly_chart(
-        fig2,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig2, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
 
@@ -166,15 +163,9 @@ try:
         }
     )
 
-    streamlit.plotly_chart(
-        fig3,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig3, use_container_width=True)
 
-    bins = pd.cut(
-        df["total_audi"],
-        bins=30
-    )
+    bins = pd.cut(df["total_audi"], bins=30)
 
     most_common_bin = bins.value_counts().idxmax()
 
@@ -215,10 +206,7 @@ try:
         }
     )
 
-    streamlit.plotly_chart(
-        fig4,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig4, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
 
@@ -259,10 +247,7 @@ try:
         }
     )
 
-    streamlit.plotly_chart(
-        fig5,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig5, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
 
@@ -302,10 +287,7 @@ try:
         }
     )
 
-    streamlit.plotly_chart(
-        fig6,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig6, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
 
@@ -322,7 +304,6 @@ try:
     streamlit.markdown("---")
     streamlit.subheader("7. 제작 국가와 장르별 영화 편수")
 
-    # 제작 국가와 장르별 영화 편수 계산
     sunburst_df = (
         df.groupby(
             ["nation_first", "genre_first"]
@@ -346,10 +327,7 @@ try:
         )
     )
 
-    streamlit.plotly_chart(
-        fig7,
-        use_container_width=True
-    )
+    streamlit.plotly_chart(fig7, use_container_width=True)
 
     streamlit.markdown("### 이 그래프로 알 수 있는 것")
 
@@ -357,6 +335,39 @@ try:
         "제작 국가별로 영화가 몇 편씩 있는지와 "
         "각 국가 안에서 장르별 영화 편수가 어떻게 분포하는지 "
         "알 수 있습니다. 칸의 크기가 클수록 영화 편수가 많습니다."
+    )
+
+
+    # ==========================================
+    # 8. 10위권에 오래 머문 영화는 총 관객도 많은가
+    # ==========================================
+    streamlit.markdown("---")
+    streamlit.subheader("8. 10위권에 오래 머문 영화는 총 관객도 많은가")
+
+    fig8 = px.scatter(
+        df,
+        x="days_in_top10",
+        y="total_audi",
+        hover_name="movieNm",
+        title="10위권에 오래 머문 영화는 총 관객도 많은가",
+        labels={
+            "days_in_top10": "10위권에 머문 날수",
+            "total_audi": "총 관객 수"
+        },
+        hover_data={
+            "days_in_top10": ":,",
+            "total_audi": ":,"
+        }
+    )
+
+    streamlit.plotly_chart(fig8, use_container_width=True)
+
+    streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
+    streamlit.info(
+        "10위권에 머문 날수와 총 관객 수의 관계를 "
+        "확인할 수 있습니다. 점에 마우스를 올리면 "
+        "해당 영화의 이름을 확인할 수 있습니다."
     )
 
 
