@@ -1,379 +1,135 @@
+# ==============================
+# 8번 그래프
+# 왕과 사는 남자의 관객 수가 가장 많이 몰린 달
+# ==============================
 
-import streamlit
-import pandas as pd
-import plotly.express as px
-
-DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
-
-
-@streamlit.cache_data
-def load_data():
-    df = pd.read_csv(DATA_URL)
-
-    # 여러 장르가 |로 적혀 있으면 첫 번째 장르만 사용
-    df["genre_first"] = (
-        df["genre"]
-        .fillna("미상")
-        .astype(str)
-        .str.split("|")
-        .str[0]
-        .str.strip()
-    )
-
-    df.loc[df["genre_first"] == "", "genre_first"] = "미상"
-
-    # 여러 국가가 |로 적혀 있으면 첫 번째 국가만 사용
-    df["nation_first"] = (
-        df["nation"]
-        .fillna("미상")
-        .astype(str)
-        .str.split("|")
-        .str[0]
-        .str.strip()
-    )
-
-    df.loc[df["nation_first"] == "", "nation_first"] = "미상"
-
-    # 숫자형 데이터 변환 함수
-    def convert_numeric(column):
-        return pd.to_numeric(
-            df[column]
-            .fillna(0)
-            .astype(str)
-            .str.replace(",", "", regex=False)
-            .str.strip(),
-            errors="coerce"
-        ).fillna(0)
-
-    # 총 관객 수
-    df["total_audi"] = convert_numeric("total_audi")
-
-    # 개봉일 스크린 수
-    df["first_scrn"] = convert_numeric("first_scrn")
-
-    # 첫 주 관객 수
-    df["first_week_audi"] = convert_numeric("first_week_audi")
-
-    # 10위권에 머문 날수
-    df["days_in_top10"] = convert_numeric("days_in_top10")
-
-    # 영화 이름이 없는 경우 처리
-    df["movieNm"] = (
-        df["movieNm"]
-        .fillna("영화명 미상")
-        .astype(str)
-    )
-
-    return df
-
+streamlit.header("8. 왕과 사는 남자의 월별 관객 수")
 
 try:
-    df = load_data()
-
-    # ==========================================
-    # 1. 장르별 영화 편수
-    # ==========================================
-    streamlit.subheader("1. 장르별 영화 편수")
-
-    genre_counts = (
-        df["genre_first"]
-        .value_counts()
-        .rename_axis("장르")
-        .reset_index(name="영화 편수")
-    )
-
-    fig1 = px.pie(
-        genre_counts,
-        names="장르",
-        values="영화 편수",
-        hole=0.55,
-        title="장르별 영화 편수"
-    )
-
-    fig1.update_traces(
-        textposition="inside",
-        textinfo="percent",
-        hovertemplate=(
-            "<b>%{label}</b><br>"
-            "편수: %{value}편<br>"
-            "비율: %{percent}"
-            "<extra></extra>"
-        )
-    )
-
-    streamlit.plotly_chart(fig1, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "장르별로 영화가 몇 편씩 분포되어 있는지와 "
-        "각 장르가 차지하는 비율을 알 수 있습니다."
-    )
-
-
-    # ==========================================
-    # 2. 장르 안에 영화가 들어 있는 트리맵
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("2. 장르 안에 영화가 들어 있는 트리맵")
-
-    treemap_df = df[
-        ["genre_first", "movieNm", "total_audi"]
-    ].copy()
-
-    fig2 = px.treemap(
-        treemap_df,
-        path=["genre_first", "movieNm"],
-        values="total_audi",
-        title="장르별 영화와 총 관객"
-    )
-
-    fig2.update_traces(
-        hovertemplate=(
-            "<b>%{label}</b><br>"
-            "총 관객: %{value:,.0f}명"
-            "<extra></extra>"
-        )
-    )
-
-    streamlit.plotly_chart(fig2, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "장르별로 어떤 영화가 포함되어 있는지와 "
-        "영화별 총 관객 규모의 차이를 알 수 있습니다."
-    )
-
-
-    # ==========================================
-    # 3. 총 관객 수 분포
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("3. 총 관객 수 분포")
-
-    fig3 = px.histogram(
-        df,
-        x="total_audi",
-        nbins=30,
-        title="영화별 총 관객 수 분포",
-        labels={
-            "total_audi": "총 관객 수",
-            "count": "영화 편수"
-        }
-    )
-
-    streamlit.plotly_chart(fig3, use_container_width=True)
-
-    bins = pd.cut(df["total_audi"], bins=30)
-
-    most_common_bin = bins.value_counts().idxmax()
-
-    max_idx = df["total_audi"].idxmax()
-
-    max_movie = df.loc[max_idx, "movieNm"]
-
-    max_audi = df.loc[max_idx, "total_audi"]
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        f"대부분의 영화는 총 관객 수가 "
-        f"{most_common_bin.left:,.0f}명 ~ "
-        f"{most_common_bin.right:,.0f}명 구간에 몰려 있습니다. "
-        f"가장 관객이 많은 영화는 **{max_movie}**이며, "
-        f"총 관객 수는 **{max_audi:,.0f}명**입니다."
-    )
-
-
-    # ==========================================
-    # 4. 개봉일 스크린 수와 총 관객의 관계
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("4. 개봉일 스크린 수와 총 관객의 관계")
-
-    fig4 = px.scatter(
-        df,
-        x="first_scrn",
-        y="total_audi",
-        color="genre_first",
-        hover_name="movieNm",
-        title="개봉일 스크린 수와 총 관객의 관계",
-        labels={
-            "first_scrn": "개봉일 스크린 수",
-            "total_audi": "총 관객",
-            "genre_first": "장르"
-        }
-    )
-
-    streamlit.plotly_chart(fig4, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "개봉일 스크린 수와 총 관객의 관계를 알 수 있으며, "
-        "장르별로 점의 색이 다르게 표시됩니다."
-    )
-
-
-    # ==========================================
-    # 5. 장르별 총 관객 수 상자 그림
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("5. 장르별 총 관객 수 분포")
-
-    genre_counts_5 = df["genre_first"].value_counts()
-
-    selected_genres = genre_counts_5[
-        genre_counts_5 >= 10
-    ].index
-
-    boxplot_df = df[
-        df["genre_first"].isin(selected_genres)
-    ][
-        ["genre_first", "total_audi", "movieNm"]
-    ].copy()
-
-    fig5 = px.box(
-        boxplot_df,
-        x="genre_first",
-        y="total_audi",
-        points="outliers",
-        hover_name="movieNm",
-        title="영화가 10편 이상인 장르별 총 관객 수",
-        labels={
-            "genre_first": "장르",
-            "total_audi": "총 관객 수"
-        }
-    )
-
-    streamlit.plotly_chart(fig5, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "영화가 10편 이상인 장르들의 총 관객 수 분포를 "
-        "비교할 수 있습니다. 상자 밖으로 튀어나온 점은 "
-        "해당 장르에서 관객 수가 특히 높은 영화나 낮은 영화를 "
-        "나타내며, 점에 마우스를 올리면 영화명을 확인할 수 있습니다."
-    )
-
-
-    # ==========================================
-    # 6. 첫 주 관객 수를 활용한 버블 산점도
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("6. 첫 주 관객 수를 활용한 버블 산점도")
-
-    fig6 = px.scatter(
-        df,
-        x="first_scrn",
-        y="total_audi",
-        color="genre_first",
-        size="first_week_audi",
-        size_max=50,
-        hover_name="movieNm",
-        hover_data={
-            "first_scrn": ":,",
-            "total_audi": ":,",
-            "first_week_audi": ":,"
-        },
-        title="개봉일 스크린 수와 총 관객의 관계 (버블 그래프)",
-        labels={
-            "first_scrn": "개봉일 스크린 수",
-            "total_audi": "총 관객",
-            "genre_first": "장르",
-            "first_week_audi": "첫 주 관객 수"
-        }
-    )
-
-    streamlit.plotly_chart(fig6, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "개봉일 스크린 수와 총 관객의 관계를 확인하면서 "
-        "첫 주 관객 수가 많을수록 버블이 크게 표시됩니다. "
-        "장르별 색상으로 영화의 분포를 비교할 수 있습니다."
-    )
-
-
-    # ==========================================
-    # 7. 제작 국가에서 장르로 내려가는 선버스트
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("7. 제작 국가와 장르별 영화 편수")
-
-    sunburst_df = (
-        df.groupby(
-            ["nation_first", "genre_first"]
-        )
-        .size()
-        .reset_index(name="영화 편수")
-    )
-
-    fig7 = px.sunburst(
-        sunburst_df,
-        path=["nation_first", "genre_first"],
-        values="영화 편수",
-        title="제작 국가에서 장르로 내려가는 선버스트 그래프"
-    )
-
-    fig7.update_traces(
-        hovertemplate=(
-            "<b>%{label}</b><br>"
-            "영화 편수: %{value}편"
-            "<extra></extra>"
-        )
-    )
-
-    streamlit.plotly_chart(fig7, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "제작 국가별로 영화가 몇 편씩 있는지와 "
-        "각 국가 안에서 장르별 영화 편수가 어떻게 분포하는지 "
-        "알 수 있습니다. 칸의 크기가 클수록 영화 편수가 많습니다."
-    )
-
-
-    # ==========================================
-    # 8. 10위권에 오래 머문 영화는 총 관객도 많은가
-    # ==========================================
-    streamlit.markdown("---")
-    streamlit.subheader("8. 10위권에 오래 머문 영화는 총 관객도 많은가")
-
-    fig8 = px.scatter(
-        df,
-        x="days_in_top10",
-        y="total_audi",
-        hover_name="movieNm",
-        title="10위권에 오래 머문 영화는 총 관객도 많은가",
-        labels={
-            "days_in_top10": "10위권에 머문 날수",
-            "total_audi": "총 관객 수"
-        },
-        hover_data={
-            "days_in_top10": ":,",
-            "total_audi": ":,"
-        }
-    )
-
-    streamlit.plotly_chart(fig8, use_container_width=True)
-
-    streamlit.markdown("### 이 그래프로 알 수 있는 것")
-
-    streamlit.info(
-        "10위권에 머문 날수와 총 관객 수의 관계를 "
-        "확인할 수 있습니다. 점에 마우스를 올리면 "
-        "해당 영화의 이름을 확인할 수 있습니다."
-    )
-
-
-except Exception as e:
-    streamlit.error(
-        "데이터를 불러오거나 그래프를 만드는 중 오류가 발생했습니다."
-    )
-
-    streamlit.code(str(e))
+    daily_data = load_daily_data()
+
+    # 컬럼명 확인
+    movie_column = None
+    for column in ["movieNm", "movie_name", "movie_name_kor"]:
+        if column in daily_data.columns:
+            movie_column = column
+            break
+
+    date_column = None
+    for column in ["date", "showDt", "show_date"]:
+        if column in daily_data.columns:
+            date_column = column
+            break
+
+    audience_column = None
+    for column in ["daily_audi", "dailyAudience", "daily_audience"]:
+        if column in daily_data.columns:
+            audience_column = column
+            break
+
+    if movie_column is None:
+        streamlit.error("영화 이름 컬럼을 찾을 수 없습니다.")
+
+    elif date_column is None:
+        streamlit.error("날짜 컬럼을 찾을 수 없습니다.")
+
+    elif audience_column is None:
+        streamlit.error("일일 관객 수 컬럼을 찾을 수 없습니다.")
+
+    else:
+        target = daily_data[
+            daily_data[movie_column]
+            .astype(str)
+            .str.contains("왕과 사는 남자", regex=False, na=False)
+        ].copy()
+
+        if target.empty:
+            streamlit.warning(
+                "해당 영화의 데이터를 찾지 못했습니다. "
+                "영화 제목이 데이터에 있는지 확인해 주세요."
+            )
+
+        else:
+            target["날짜"] = pd.to_datetime(
+                target[date_column].astype(str).str.replace(".0", "", regex=False),
+                format="%Y%m%d",
+                errors="coerce"
+            )
+
+            # YYYY-MM-DD 형식도 추가로 처리
+            missing_date = target["날짜"].isna()
+
+            target.loc[missing_date, "날짜"] = pd.to_datetime(
+                target.loc[missing_date, date_column],
+                errors="coerce"
+            )
+
+            target["관객 수"] = (
+                target[audience_column]
+                .astype(str)
+                .str.replace(",", "", regex=False)
+            )
+
+            target["관객 수"] = pd.to_numeric(
+                target["관객 수"],
+                errors="coerce"
+            )
+
+            target = target.dropna(subset=["날짜", "관객 수"])
+
+            if target.empty:
+                streamlit.warning("날짜 또는 관객 수 데이터를 읽을 수 없습니다.")
+
+            else:
+                target["월"] = target["날짜"].dt.month
+
+                monthly_audience = (
+                    target.groupby("월", as_index=False)["관객 수"]
+                    .sum()
+                    .sort_values("월")
+                )
+
+                monthly_audience["월"] = (
+                    monthly_audience["월"].astype(str) + "월"
+                )
+
+                fig8 = px.bar(
+                    monthly_audience,
+                    x="월",
+                    y="관객 수",
+                    title="왕과 사는 남자의 월별 누적 관객 수",
+                    labels={
+                        "월": "월",
+                        "관객 수": "관객 수"
+                    },
+                    text_auto=True
+                )
+
+                fig8.update_layout(
+                    xaxis_title="월",
+                    yaxis_title="관객 수",
+                    xaxis_categoryorder="array",
+                    xaxis_categoryarray=[
+                        "1월", "2월", "3월", "4월",
+                        "5월", "6월", "7월", "8월",
+                        "9월", "10월", "11월", "12월"
+                    ]
+                )
+
+                streamlit.plotly_chart(
+                    fig8,
+                    use_container_width=True
+                )
+
+                max_month = monthly_audience.loc[
+                    monthly_audience["관객 수"].idxmax()
+                ]
+
+                streamlit.info(
+                    f"관객 수가 가장 많이 몰린 달은 "
+                    f"**{max_month['월']}**입니다."
+                )
+
+except Exception as error:
+    streamlit.error("8번 그래프를 만드는 중 오류가 발생했습니다.")
+    streamlit.code(str(error))
