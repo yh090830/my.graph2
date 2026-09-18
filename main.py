@@ -22,6 +22,18 @@ def load_data():
 
     df.loc[df["genre_first"] == "", "genre_first"] = "미상"
 
+    # 여러 국가가 |로 적혀 있으면 첫 번째 국가만 사용
+    df["nation_first"] = (
+        df["nation"]
+        .fillna("미상")
+        .astype(str)
+        .str.split("|")
+        .str[0]
+        .str.strip()
+    )
+
+    df.loc[df["nation_first"] == "", "nation_first"] = "미상"
+
     # 숫자형 데이터 변환 함수
     def convert_numeric(column):
         return pd.to_numeric(
@@ -222,7 +234,6 @@ try:
     streamlit.markdown("---")
     streamlit.subheader("5. 장르별 총 관객 수 분포")
 
-    # 영화가 10편 이상인 장르만 선택
     genre_counts_5 = df["genre_first"].value_counts()
 
     selected_genres = genre_counts_5[
@@ -302,6 +313,50 @@ try:
         "개봉일 스크린 수와 총 관객의 관계를 확인하면서 "
         "첫 주 관객 수가 많을수록 버블이 크게 표시됩니다. "
         "장르별 색상으로 영화의 분포를 비교할 수 있습니다."
+    )
+
+
+    # ==========================================
+    # 7. 제작 국가에서 장르로 내려가는 선버스트
+    # ==========================================
+    streamlit.markdown("---")
+    streamlit.subheader("7. 제작 국가와 장르별 영화 편수")
+
+    # 제작 국가와 장르별 영화 편수 계산
+    sunburst_df = (
+        df.groupby(
+            ["nation_first", "genre_first"]
+        )
+        .size()
+        .reset_index(name="영화 편수")
+    )
+
+    fig7 = px.sunburst(
+        sunburst_df,
+        path=["nation_first", "genre_first"],
+        values="영화 편수",
+        title="제작 국가에서 장르로 내려가는 선버스트 그래프"
+    )
+
+    fig7.update_traces(
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "영화 편수: %{value}편"
+            "<extra></extra>"
+        )
+    )
+
+    streamlit.plotly_chart(
+        fig7,
+        use_container_width=True
+    )
+
+    streamlit.markdown("### 이 그래프로 알 수 있는 것")
+
+    streamlit.info(
+        "제작 국가별로 영화가 몇 편씩 있는지와 "
+        "각 국가 안에서 장르별 영화 편수가 어떻게 분포하는지 "
+        "알 수 있습니다. 칸의 크기가 클수록 영화 편수가 많습니다."
     )
 
 
