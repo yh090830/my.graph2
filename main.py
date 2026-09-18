@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -24,10 +23,12 @@ def load_daily():
     return pd.read_csv(DAILY_URL)
 
 
-def number_to_numeric(data, column):
+def convert_number(data, column):
     if column in data.columns:
         data[column] = pd.to_numeric(
-            data[column].astype(str).str.replace(",", "", regex=False),
+            data[column]
+            .astype(str)
+            .str.replace(",", "", regex=False),
             errors="coerce"
         )
     return data
@@ -36,7 +37,14 @@ def number_to_numeric(data, column):
 try:
     movies = load_movies()
 
-    required_movies = [
+    st.title("영화 데이터 그래프 도감 2 - 분포와 관계")
+
+
+    # ==============================
+    # 데이터 전처리
+    # ==============================
+
+    required_columns = [
         "movieNm",
         "genre",
         "nation",
@@ -45,14 +53,14 @@ try:
         "first_week_audi"
     ]
 
-    missing_movies = [
-        column for column in required_movies
+    missing = [
+        column for column in required_columns
         if column not in movies.columns
     ]
 
-    if missing_movies:
-        st.error("영화 데이터에 필요한 컬럼이 없습니다.")
-        st.write("없는 컬럼:", missing_movies)
+    if missing:
+        st.error("영화 데이터의 컬럼을 확인할 수 없습니다.")
+        st.write("없는 컬럼:", missing)
         st.write("현재 컬럼:", list(movies.columns))
         st.stop()
 
@@ -77,19 +85,15 @@ try:
         "first_scrn",
         "first_week_audi",
         "first_show",
-        "first_week_audi",
         "days_in_top10"
     ]:
-        movies = number_to_numeric(movies, column)
+        movies = convert_number(movies, column)
 
     movies = movies.dropna(subset=["total_audi"])
-
-    st.title("영화 데이터 그래프 도감 2 - 분포와 관계")
 
 
     # ==============================
     # 1번 그래프
-    # 장르별 영화 수 도넛 차트
     # ==============================
 
     st.header("1. 장르별 영화 수")
@@ -112,12 +116,13 @@ try:
 
     st.plotly_chart(fig1, use_container_width=True)
 
-    st.info("알 수 있는 것: 어떤 장르의 영화가 가장 많이 분포하는지 알 수 있습니다.")
+    st.info(
+        "알 수 있는 것: 어떤 장르의 영화가 가장 많이 분포하는지 알 수 있습니다."
+    )
 
 
     # ==============================
     # 2번 그래프
-    # 장르별 영화 관객 수 트리맵
     # ==============================
 
     st.header("2. 장르별 영화 관객 수 트리맵")
@@ -130,20 +135,18 @@ try:
         treemap_data,
         path=["genre_first", "movieNm"],
         values="total_audi",
-        title="장르와 영화별 총 관객 수",
-        hover_data={
-            "total_audi": ":,"
-        }
+        title="장르와 영화별 총 관객 수"
     )
 
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.info("알 수 있는 것: 장르별로 어떤 영화가 많은 관객을 모았는지 비교할 수 있습니다.")
+    st.info(
+        "알 수 있는 것: 장르별로 어떤 영화가 많은 관객을 모았는지 비교할 수 있습니다."
+    )
 
 
     # ==============================
     # 3번 그래프
-    # 총 관객 수 히스토그램
     # ==============================
 
     st.header("3. 총 관객 수 분포")
@@ -153,33 +156,30 @@ try:
         x="total_audi",
         nbins=30,
         title="영화별 총 관객 수 분포",
-        labels={
-            "total_audi": "총 관객 수"
-        }
+        labels={"total_audi": "총 관객 수"}
     )
 
     st.plotly_chart(fig3, use_container_width=True)
 
-    most_audience_movie = movies.loc[
+    max_movie = movies.loc[
         movies["total_audi"].idxmax(),
         "movieNm"
     ]
 
-    highest_audience = movies["total_audi"].max()
+    max_audience = movies["total_audi"].max()
 
     st.info(
-        f"알 수 있는 것: 대부분의 영화가 어느 관객 수 구간에 몰려 있는지 확인할 수 있습니다. "
-        f"가장 관객이 많은 영화는 **{most_audience_movie}**이며, "
-        f"총 관객 수는 **{highest_audience:,.0f}명**입니다."
+        f"알 수 있는 것: 가장 관객이 많은 영화는 "
+        f"**{max_movie}**이며, 총 관객 수는 "
+        f"**{max_audience:,.0f}명**입니다."
     )
 
 
     # ==============================
     # 4번 그래프
-    # 첫 상영 스크린 수와 총 관객 수
     # ==============================
 
-    st.header("4. 첫 상영 스크린 수와 총 관객 수의 관계")
+    st.header("4. 첫 상영 스크린 수와 총 관객 수")
 
     scatter_data = movies.dropna(
         subset=["first_scrn", "total_audi", "genre_first"]
@@ -191,7 +191,7 @@ try:
         y="total_audi",
         color="genre_first",
         hover_name="movieNm",
-        title="첫 상영 스크린 수와 총 관객 수",
+        title="첫 상영 스크린 수와 총 관객 수의 관계",
         labels={
             "first_scrn": "첫 상영 스크린 수",
             "total_audi": "총 관객 수",
@@ -201,12 +201,13 @@ try:
 
     st.plotly_chart(fig4, use_container_width=True)
 
-    st.info("알 수 있는 것: 첫 상영 스크린 수와 총 관객 수 사이의 관계를 확인할 수 있습니다.")
+    st.info(
+        "알 수 있는 것: 첫 상영 스크린 수와 총 관객 수 사이의 관계를 확인할 수 있습니다."
+    )
 
 
     # ==============================
     # 5번 그래프
-    # 장르별 총 관객 수 박스플롯
     # ==============================
 
     st.header("5. 장르별 총 관객 수 박스플롯")
@@ -223,27 +224,32 @@ try:
         subset=["genre_first", "total_audi"]
     )
 
-    fig5 = px.box(
-        box_data,
-        x="genre_first",
-        y="total_audi",
-        points="outliers",
-        hover_name="movieNm",
-        title="영화가 10편 이상인 장르의 총 관객 수",
-        labels={
-            "genre_first": "장르",
-            "total_audi": "총 관객 수"
-        }
+    if box_data.empty:
+        st.warning("영화가 10편 이상인 장르가 없습니다.")
+
+    else:
+        fig5 = px.box(
+            box_data,
+            x="genre_first",
+            y="total_audi",
+            points="outliers",
+            hover_name="movieNm",
+            title="영화가 10편 이상인 장르의 총 관객 수",
+            labels={
+                "genre_first": "장르",
+                "total_audi": "총 관객 수"
+            }
+        )
+
+        st.plotly_chart(fig5, use_container_width=True)
+
+    st.info(
+        "알 수 있는 것: 장르별 총 관객 수의 분포와 특이값을 확인할 수 있습니다."
     )
-
-    st.plotly_chart(fig5, use_container_width=True)
-
-    st.info("알 수 있는 것: 장르별 총 관객 수의 중앙값과 분포, 특이하게 높은 관객 수를 확인할 수 있습니다.")
 
 
     # ==============================
     # 6번 그래프
-    # 첫 스크린 수와 총 관객 수 버블 차트
     # ==============================
 
     st.header("6. 첫 스크린 수와 총 관객 수 버블 차트")
@@ -268,7 +274,7 @@ try:
         color="genre_first",
         size="first_week_audi",
         hover_name="movieNm",
-        title="첫 스크린 수와 총 관객 수",
+        title="첫 스크린 수와 총 관객 수 버블 차트",
         labels={
             "first_scrn": "첫 상영 스크린 수",
             "total_audi": "총 관객 수",
@@ -279,12 +285,13 @@ try:
 
     st.plotly_chart(fig6, use_container_width=True)
 
-    st.info("알 수 있는 것: 첫 주 관객 수를 버블 크기로 나타내어 영화의 초기 흥행 규모를 비교할 수 있습니다.")
+    st.info(
+        "알 수 있는 것: 버블 크기로 영화의 첫 주 관객 수를 비교할 수 있습니다."
+    )
 
 
     # ==============================
     # 7번 그래프
-    # 국가와 장르 선버스트 차트
     # ==============================
 
     st.header("7. 국가별·장르별 영화 분포")
@@ -302,46 +309,43 @@ try:
         sunburst_data,
         path=["nation_first", "genre_first"],
         values="영화 수",
-        title="국가별·장르별 영화 수",
-        labels={
-            "nation_first": "국가",
-            "genre_first": "장르"
-        }
+        title="국가별·장르별 영화 수"
     )
 
     st.plotly_chart(fig7, use_container_width=True)
 
-    st.info("알 수 있는 것: 국가별 영화 제작 분포와 장르 구성을 함께 확인할 수 있습니다.")
+    st.info(
+        "알 수 있는 것: 국가별 영화 제작 분포와 장르 구성을 확인할 수 있습니다."
+    )
 
 
     # ==============================
     # 8번 그래프
-    # 왕과 사는 남자의 월별 관객 수
     # ==============================
 
     st.header("8. 왕과 사는 남자의 월별 관객 수")
 
     daily = load_daily()
 
-    required_daily = [
-        "date",
-        "movieNm",
-        "daily_audi"
+    daily_required = [
+        "날짜",
+        "영화명",
+        "일관객"
     ]
 
-    missing_daily = [
-        column for column in required_daily
+    daily_missing = [
+        column for column in daily_required
         if column not in daily.columns
     ]
 
-    if missing_daily:
-        st.error("일일 영화 데이터에 필요한 컬럼이 없습니다.")
-        st.write("없는 컬럼:", missing_daily)
+    if daily_missing:
+        st.error("일일 영화 데이터의 컬럼을 확인할 수 없습니다.")
+        st.write("없는 컬럼:", daily_missing)
         st.write("현재 컬럼:", list(daily.columns))
         st.stop()
 
     target = daily[
-        daily["movieNm"]
+        daily["영화명"]
         .astype(str)
         .str.contains(
             "왕과 사는 남자",
@@ -356,36 +360,41 @@ try:
         )
 
     else:
+        # 날짜 변환
         date_text = (
-            target["date"]
+            target["날짜"]
             .astype(str)
             .str.replace(".0", "", regex=False)
             .str.strip()
         )
 
-        target["날짜"] = pd.to_datetime(
+        target["날짜_변환"] = pd.to_datetime(
             date_text,
             format="%Y%m%d",
             errors="coerce"
         )
 
-        invalid_dates = target["날짜"].isna()
+        invalid_dates = target["날짜_변환"].isna()
 
         if invalid_dates.any():
-            target.loc[invalid_dates, "날짜"] = pd.to_datetime(
+            target.loc[
+                invalid_dates,
+                "날짜_변환"
+            ] = pd.to_datetime(
                 date_text[invalid_dates],
                 errors="coerce"
             )
 
+        # 관객 수 변환
         target["관객 수"] = pd.to_numeric(
-            target["daily_audi"]
+            target["일관객"]
             .astype(str)
             .str.replace(",", "", regex=False),
             errors="coerce"
         )
 
         target = target.dropna(
-            subset=["날짜", "관객 수"]
+            subset=["날짜_변환", "관객 수"]
         )
 
         if target.empty:
@@ -394,7 +403,7 @@ try:
             )
 
         else:
-            target["월"] = target["날짜"].dt.month
+            target["월"] = target["날짜_변환"].dt.month
 
             monthly = (
                 target.groupby("월", as_index=False)["관객 수"]
@@ -423,17 +432,6 @@ try:
                 textposition="outside"
             )
 
-            fig8.update_layout(
-                xaxis={
-                    "categoryorder": "array",
-                    "categoryarray": [
-                        "1월", "2월", "3월", "4월",
-                        "5월", "6월", "7월", "8월",
-                        "9월", "10월", "11월", "12월"
-                    ]
-                }
-            )
-
             st.plotly_chart(
                 fig8,
                 use_container_width=True
@@ -444,9 +442,11 @@ try:
             ]
 
             st.info(
-                f"알 수 있는 것: 왕과 사는 남자의 관객 수가 가장 많이 몰린 달은 "
+                f"알 수 있는 것: 왕과 사는 남자의 관객 수가 "
+                f"가장 많이 몰린 달은 "
                 f"**{int(max_row['월'])}월**입니다."
             )
+
 
 except Exception as error:
     st.error("프로그램 실행 중 오류가 발생했습니다.")
